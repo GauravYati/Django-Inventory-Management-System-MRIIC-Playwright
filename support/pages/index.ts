@@ -1,0 +1,10 @@
+export { BasePage } from './base.page';
+export { HomePage } from './home.page';
+export { InventoryCatalogPage } from './inventory-catalog.page';
+export { ItemDetailPage } from './item-detail.page';
+export type { BorrowRequestInput } from './item-detail.page';
+export { LoginPage } from './login.page';
+export { ResourceFormPage } from './resource-form.page';
+export type { ResourceInput } from './resource-form.page';
+export { SearchResultsPage } from './search-results.page';
+export { StaffWorkspacePage } from './staff-workspace.page';

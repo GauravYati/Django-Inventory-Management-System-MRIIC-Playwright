@@ -1,0 +1,18 @@
+{
+  "name": "django-inventory-mriic-playwright",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Playwright end-to-end automation for the MRIIC Django inventory project.",
+  "scripts": {
+    "test": "playwright test",
+    "test:headed": "playwright test --headed",
+    "test:ui": "playwright test --ui",
+    "report": "playwright show-report",
+    "screenshots": "node scripts/capture-screenshots.js"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.52.0",
+    "@types/node": "^25.9.1",
+    "typescript": "^5.8.3"
+  }
+}
