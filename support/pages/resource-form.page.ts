@@ -1,7 +1,4 @@
-import { TestInfo } from '@playwright/test';
-import fs from 'fs';
 import path from 'path';
-import { djangoProjectDir } from '../django';
 import { BasePage } from './base.page';
 
 export type ResourceInput = {
@@ -19,10 +16,10 @@ export class ResourceFormPage extends BasePage {
     await this.page.locator('.category-panel').getByRole('button', { name: 'Save Category' }).click();
   }
 
-  async createResource(resource: ResourceInput, testInfo: TestInfo): Promise<void> {
+  async createResource(resource: ResourceInput): Promise<void> {
     await this.page.getByLabel('Resource name').fill(resource.name);
     await this.page.getByLabel('Categories').selectOption({ label: resource.category });
-    await this.page.getByLabel('Resource image').setInputFiles(await createPngFixture(testInfo));
+    await this.page.getByLabel('Resource image').setInputFiles(resourceImageFixturePath);
     await this.page.getByLabel('Available quantity').fill(String(resource.quantity));
     await this.page.locator('input[name="featured"]').setChecked(resource.featured, { force: true });
     await this.page.getByLabel('Description').fill(resource.description);
@@ -37,9 +34,4 @@ export class ResourceFormPage extends BasePage {
   }
 }
 
-async function createPngFixture(testInfo: TestInfo): Promise<string> {
-  const pngPath = testInfo.outputPath(`resource-${Date.now()}.png`);
-  const sourceImage = path.join(djangoProjectDir, 'mriic', 'static', 'mriic', 'logo2.png');
-  fs.copyFileSync(sourceImage, pngPath);
-  return pngPath;
-}
+export const resourceImageFixturePath = path.resolve(__dirname, '..', '..', 'tests', 'fixtures', 'images', 'hammer.jpg');

@@ -30,8 +30,9 @@ test('staff can log in and log out', async ({ page }) => {
   await expect(workspace.nav).toContainText('Staff Login');
 });
 
-test('staff can add a category and create a new inventory resource', async ({ page }, testInfo) => {
+test('staff can add a category and create a new inventory resource with a fixture image', async ({ page }) => {
   const login = new LoginPage(page);
+  const detail = new ItemDetailPage(page);
   const form = new ResourceFormPage(page);
   const workspace = new StaffWorkspacePage(page);
 
@@ -51,13 +52,33 @@ test('staff can add a category and create a new inventory resource', async ({ pa
       featured: true,
       description: 'Created by Playwright automation.',
       tags: 'playwright, automation'
-    },
-    testInfo
+    }
   );
 
   await expect(page).toHaveURL(/\/inventory\//);
   await expect(page.getByRole('alert')).toContainText(`"${itemName}" has been added to inventory.`);
   await expect(workspace.row(itemName)).toBeVisible();
+
+  await detail.gotoFromCatalog(itemName);
+  await expect(page.getByRole('img', { name: itemName })).toHaveAttribute('src', /hammer/i);
+});
+
+test('staff sees validation for empty categories, duplicate categories, and blank resources', async ({ page }) => {
+  const login = new LoginPage(page);
+  const form = new ResourceFormPage(page);
+
+  await login.loginAsStaff();
+  await page.goto('/add-inventory/');
+
+  await form.addCategory('');
+  await expect(page.getByRole('alert')).toContainText('Enter a category name before saving.');
+
+  await form.addCategory(testCategories.electronics);
+  await expect(page.getByRole('alert')).toContainText(`Category "${testCategories.electronics}" already exists.`);
+
+  await page.getByRole('button', { name: 'Add Resource' }).click();
+  await expect(page.getByRole('alert')).toContainText('Item could not be saved. Please check the form.');
+  await expect(page.locator('.field-error')).not.toHaveCount(0);
 });
 
 test('staff can edit a resource record', async ({ page }) => {
@@ -86,8 +107,23 @@ test('staff can update quantity, toggle featured, search, and delete resources',
   await expect(page.getByRole('alert')).toContainText(`"${testItems.sensorKit}" updated.`);
   await expect(workspace.row(testItems.sensorKit).getByLabel('Quantity')).toHaveValue('11');
 
+  const sensorQuantity = workspace.row(testItems.sensorKit).getByLabel('Quantity');
+  await sensorQuantity.fill('-8');
+  await workspace.row(testItems.sensorKit).getByRole('button', { name: /Save/i }).click();
+  const sensorQuantityValidationMessage = await sensorQuantity.evaluate(
+    (input: HTMLInputElement) => input.validationMessage
+  );
+  expect(sensorQuantityValidationMessage).not.toBe('');
+
+  await page.reload();
+  await expect(workspace.row(testItems.sensorKit).getByLabel('Quantity')).toHaveValue('11');
+
   await workspace.searchInventory('Delete Target');
   await expect(page.locator('.inventory-row')).toHaveCount(1);
+  await expect(workspace.row(testItems.deleteTarget)).toBeVisible();
+
+  page.once('dialog', dialog => dialog.dismiss());
+  await page.getByLabel(`Delete ${testItems.deleteTarget}`).click();
   await expect(workspace.row(testItems.deleteTarget)).toBeVisible();
 
   await workspace.deleteResource(testItems.deleteTarget);
@@ -142,4 +178,27 @@ test('staff can reject a pending borrow request', async ({ page }) => {
 
   await expect(page.getByRole('alert')).toContainText(`Rejected borrow request for "${testItems.sensorKit}".`);
   await expect(workspace.borrowRow('Borrow Reject Student')).toHaveCount(0);
+});
+
+test('staff cannot approve a borrow request after stock drops below requested quantity', async ({ page }) => {
+  const detail = new ItemDetailPage(page);
+  const login = new LoginPage(page);
+  const workspace = new StaffWorkspacePage(page);
+
+  await detail.gotoFromCatalog(testItems.sensorKit);
+  await detail.submitBorrowRequest({
+    name: 'Borrow Stock Edge Student',
+    email: 'borrow-stock-edge@example.com',
+    quantity: 3,
+    purpose: 'Insufficient stock approval test'
+  });
+
+  await login.loginAsStaff();
+  await workspace.goto();
+  await workspace.updateResourceRow(testItems.sensorKit, { quantity: 1 });
+
+  await workspace.approveBorrow('Borrow Stock Edge Student');
+  await expect(page.getByRole('alert')).toContainText(`Cannot approve "${testItems.sensorKit}". Only 1 unit(s) are available.`);
+  await expect(workspace.row(testItems.sensorKit).getByLabel('Quantity')).toHaveValue('1');
+  await expect(workspace.borrowRow('Borrow Stock Edge Student')).toContainText('Pending');
 });

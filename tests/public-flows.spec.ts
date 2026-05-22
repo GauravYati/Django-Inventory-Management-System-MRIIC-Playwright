@@ -30,6 +30,18 @@ test('student can browse inventory, filter by category, search, and open details
   await detail.expectBorrowFormVisible();
 });
 
+test('student sees empty-state messaging for blank and unmatched searches', async ({ page }) => {
+  await page.goto('/search-inventory/?q=');
+  await expect(page.getByText('Use the search bar to find an item, category, or tag.')).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'No items found' })).toBeVisible();
+  await expect(page.locator('.product-card')).toHaveCount(0);
+
+  await page.goto('/search-inventory/?q=definitely-not-a-lab-resource');
+  await expect(page.getByText('Showing results for "definitely-not-a-lab-resource".')).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'No items found' })).toBeVisible();
+  await expect(page.locator('.product-card')).toHaveCount(0);
+});
+
 test('student can submit a borrow request from a resource detail page', async ({ page }) => {
   const detail = new ItemDetailPage(page);
   await detail.gotoFromCatalog(testItems.oscilloscope);
@@ -43,6 +55,24 @@ test('student can submit a borrow request from a resource detail page', async ({
 
   await expect(page.getByRole('alert')).toContainText('Borrow request submitted');
   await expect(page.getByRole('heading', { name: testItems.oscilloscope })).toBeVisible();
+});
+
+test('student cannot submit a borrow request with an invalid email', async ({ page }) => {
+  const detail = new ItemDetailPage(page);
+  await detail.gotoFromCatalog(testItems.oscilloscope);
+
+  await page.getByLabel('Name').fill('Invalid Borrow Student');
+  await page.getByLabel('Email').fill('invalid-email');
+  await page.getByLabel('Quantity').fill('1');
+  await page.getByLabel('Purpose').fill('Browser validation test');
+  await page.getByRole('button', { name: /Submit request/i }).click();
+
+  const emailValidationMessage = await page
+    .getByLabel('Email')
+    .evaluate((input: HTMLInputElement) => input.validationMessage);
+
+  expect(emailValidationMessage).not.toBe('');
+  await expect(page.getByRole('alert')).toHaveCount(0);
 });
 
 test('student sees a clear validation message when borrow quantity exceeds stock', async ({ page }) => {
