@@ -2,7 +2,7 @@
 
 This folder is intentionally outside the Django project folder. It contains the Playwright project, automation tests, and manual test cases for the MRIIC Django inventory system.
 
-## Parent Folder:
+## Parent Folder
 https://github.com/GauravYati/MRIIC-Research-Lab-Inventory-Management-System.git
 
 ## Prerequisites
